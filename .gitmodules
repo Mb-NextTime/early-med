@@ -1,0 +1,6 @@
+[submodule "pycaret"]
+	path = pycaret
+	url = git@github.com:Mb-NextTime/pycaret.git
+[submodule "TabEBM"]
+	path = TabEBM
+	url = git@github.com:Mb-NextTime/TabEBM
