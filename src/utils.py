@@ -2,11 +2,14 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from skforecast.recursive import ForecasterRecursive
 from sklearn.model_selection import learning_curve as sk_learning_curve, cross_validate
+from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import GradientBoostingClassifier
 
 DEFAULT_TRAIN_SIZES = np.linspace(0.1, 1.0, 10)
-DEFAULT_COLORS = ['lightblue', 'lightgreen', 'plum', 'peachpuff']
+DEFAULT_COLORS = ['deepskyblue', 'limegreen', 'violet', 'sandybrown']
+SECONDARY_COLORS = ['lightskyblue', 'lightgreen', 'plum', 'peachpuff']
 
 
 class LearningCurve:
@@ -39,6 +42,14 @@ class LearningCurve:
         a fraction of the maximum size of the training set, otherwise it is
         interpreted as absolute sizes of the training sets.
 
+    predict_trajectory : boolean, optional, default: True
+        Whether to predict the trajectory of learning curves
+        using time series forecasting model.
+
+    predict_extend_points : int, optional, default: 5
+        Number of train_size points to predict. Used only when
+        predict_trajectory is True.
+
     cv : int, cross-validation generator or an iterable, optional
         Determines the cross-validation splitting strategy.
         Possible inputs for cv are:
@@ -62,10 +73,6 @@ class LearningCurve:
         If RandomState instance, random_state is the random number generator;
         If None, the random number generator is the RandomState instance used
         by `np.random`. Used when ``shuffle`` is True.
-
-    kwargs : dict
-        Keyword arguments that are passed to the base class and may influence
-        the visualization as defined in other Visualizers.
 
     Attributes
     ----------
@@ -97,11 +104,12 @@ class LearningCurve:
         self,
         estimator,
         train_sizes=DEFAULT_TRAIN_SIZES,
+        predict_trajectory=True,
+        predict_extend_points=5,
         cv=None,
         scoring=None,
         shuffle=False,
-        random_state=None,
-        **kwargs
+        random_state=None
     ):
         # Validate the train sizes
         train_sizes = np.asarray(train_sizes)
@@ -109,10 +117,20 @@ class LearningCurve:
         # Set the metric parameters to be used later
         self.estimator = estimator
         self.train_sizes = train_sizes
+        self.predict_trajectory = predict_trajectory
+        self.predict_extend_points = predict_extend_points
         self.cv = cv
         self.scoring = 'balanced_accuracy' if scoring is None else scoring
         self.shuffle = shuffle
         self.random_state = random_state
+
+    def predict_points(self, points, n_points):
+        fr = ForecasterRecursive(
+            regressor=LinearRegression(),
+            lags=4
+        )
+        fr.fit(pd.Series(points))
+        return fr.predict(steps=n_points).to_numpy()
 
     def fit(self, X, y):
         """
@@ -190,6 +208,36 @@ class LearningCurve:
             self.ax.plot(
                 self.train_sizes_, mean, "o-", color=colors[idx], label=labels[idx]
             )
+
+        if self.predict_trajectory:
+            self.extend_train_sizes_ = self.predict_points(self.train_sizes_, self.predict_extend_points)
+            self.extend_train_sizes_ = np.concatenate(([self.train_sizes_[-1]], self.extend_train_sizes_))
+
+            predict_colors = SECONDARY_COLORS[:2]
+
+            extended_curves = []
+            for curve in curves:
+                extended_curve_stats = []
+                for stats in curve:
+                    extended_stats = self.predict_points(stats, self.predict_extend_points)
+                    extended_curve_stats.append(
+                        np.concatenate(([stats[-1]], extended_stats))
+                    )
+                extended_curves.append(extended_curve_stats)
+
+
+            # Plot the fill betweens first so they are behind the curves.
+            for idx, (mean, std) in enumerate(extended_curves):
+                # Plot one standard deviation above and below the mean
+                self.ax.fill_between(
+                    self.extend_train_sizes_, mean - std, mean + std, alpha=0.25, color=predict_colors[idx]
+                )
+
+            for idx, (mean, _) in enumerate(extended_curves):
+                self.ax.plot(
+                    self.extend_train_sizes_, mean, "o--",
+                    color=predict_colors[idx], label='Expected '+labels[idx]
+                )
 
         self.finalize()
 
