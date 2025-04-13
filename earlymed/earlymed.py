@@ -7,9 +7,12 @@ from sklearn.model_selection import learning_curve as sk_learning_curve, cross_v
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import GradientBoostingClassifier
 
+from kneed import KneeLocator
+
 DEFAULT_TRAIN_SIZES = np.linspace(0.1, 1.0, 10)
 DEFAULT_COLORS = ['deepskyblue', 'limegreen', 'violet', 'sandybrown']
 SECONDARY_COLORS = ['lightskyblue', 'lightgreen', 'plum', 'peachpuff']
+HINT_COLORS = ['pink']
 
 
 class LearningCurve:
@@ -346,6 +349,8 @@ class FeatureCurve:
         self,
         estimator,
         features_order=None,
+        hint_optimal=True,
+        n_hints=3,
         cv=None,
         scoring=None,
         random_state=None,
@@ -353,6 +358,8 @@ class FeatureCurve:
     ):
         self.estimator = estimator
         self.scoring = 'balanced_accuracy' if scoring is None else scoring
+        self.hint_optimal = hint_optimal
+        self.n_hints = n_hints
         self.cv = cv
         self.random_state = random_state
         self.features_order = features_order
@@ -407,7 +414,58 @@ class FeatureCurve:
             self.ax.plot(
                 self.features_order, mean, "o-", color=colors[idx], label=labels[idx]
             )
-        self.ax.tick_params(axis='x', labelrotation=90)
+        self.ax.tick_params(axis='x', labelrotation=90, labelsize=10 - np.log10(len(self.features_order)))
+
+        if self.hint_optimal:
+            hints = self.n_hints
+            hint_idxs = []
+
+            if self.test_scores_mean_[-1] >= self.test_scores_mean_[0]:
+                direction = 'increasing'
+                curve = 'concave'
+            else:
+                direction = 'decreasing'
+                curve = 'convex'
+
+            kneedle = KneeLocator(
+                x=range(len(self.test_scores_mean_)),
+                y=self.test_scores_mean_,
+                curve=curve,
+                direction=direction,
+                online=False,
+                S=5.
+            )
+            elbow_index = kneedle.knee
+            if elbow_index is not None:
+                hints -= 1
+                hint_idxs.append(elbow_index)
+
+            if hints > 0:
+                optimal_idxs = np.argsort(self.test_scores_mean_)[-hints:]
+                optimal_std_idxs = np.argsort(self.test_scores_std_[optimal_idxs])
+                optimal_idxs = optimal_idxs[optimal_std_idxs]
+                hint_idxs.extend(optimal_idxs[optimal_std_idxs])
+
+            hint_color = HINT_COLORS[0]
+            hint_alphas = np.linspace(0.8, 0.5, len(hint_idxs))
+            tick_locations = self.ax.get_xticks()
+
+            label_added = False
+            for i, hint in enumerate(hint_idxs):
+                span_range = 0.45
+                x_start = tick_locations[hint] - span_range
+                x_end = tick_locations[hint] + span_range
+
+                self.ax.axvspan(
+                    xmin=x_start,
+                    xmax=x_end,
+                    color=hint_color,
+                    alpha=hint_alphas[i],
+                    zorder=1,
+                    label='Optimal combination' if not label_added else None
+                )
+                label_added = True
+
         self.finalize()
 
         return self.ax
