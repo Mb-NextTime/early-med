@@ -174,5 +174,5 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-#
+# Pycaret catboost logs
 catboost_info
