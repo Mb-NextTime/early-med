@@ -263,16 +263,16 @@ class LearningCurve:
 
 class FeatureCurve:
     """
-    Visualizes the learning curve for both test and training data for
-    different training set sizes. These curves can act as a proxy to
-    demonstrate the implied learning rate with experience (e.g. how much data
+    Visualizes the feature curve for both test and training data for
+    different training set feature combinations. These curves can act as a proxy to
+    demonstrate the implied learning rate with experience (e.g. how much features
     is required to make an adequate model). They also demonstrate if the model
     is more sensitive to error due to bias vs. error due to variance and can
     be used to quickly check if a model is overfitting.
 
     The visualizer evaluates cross-validated training and test scores for
     different training set sizes. These curves are plotted so that the x-axis
-    is the training set size and the y-axis is the score.
+    are the training set features and the y-axis is the score.
 
     Parameters
     ----------
@@ -487,16 +487,13 @@ class FeatureCurve:
 
 class FeatureLearningPlot:
     """
-    Visualizes the learning curve for both test and training data for
-    different training set sizes. These curves can act as a proxy to
-    demonstrate the implied learning rate with experience (e.g. how much data
-    is required to make an adequate model). They also demonstrate if the model
-    is more sensitive to error due to bias vs. error due to variance and can
-    be used to quickly check if a model is overfitting.
+    Visualizes the feature-learning contour plot for both test data for
+    different training set sizes and features. This plot can act as a proxy to
+    demonstrate the implied learning rate with experience (e.g. how much data and
+    features are required to make an adequate model).
 
     The visualizer evaluates cross-validated training and test scores for
-    different training set sizes. These curves are plotted so that the x-axis
-    is the training set size and the y-axis is the score.
+    different training set sizes.
 
     Parameters
     ----------
