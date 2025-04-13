@@ -67,6 +67,9 @@ class LearningCurve:
         ``scorer(estimator, X, y)``. See scikit-learn model evaluation
         documentation for names of possible metrics.
 
+    ax : matplotlib.Axes object, optional
+        The axes object to plot the figure on.
+
     shuffle : boolean, optional
         Whether to shuffle training data before taking prefixes of it
         based on``train_sizes``.
@@ -111,6 +114,7 @@ class LearningCurve:
         predict_extend_points=5,
         cv=None,
         scoring=None,
+        ax=None,
         shuffle=False,
         random_state=None
     ):
@@ -124,6 +128,7 @@ class LearningCurve:
         self.predict_extend_points = predict_extend_points
         self.cv = cv
         self.scoring = 'balanced_accuracy' if scoring is None else scoring
+        self.ax = ax
         self.shuffle = shuffle
         self.random_state = random_state
 
@@ -188,7 +193,8 @@ class LearningCurve:
         """
         Renders the training and test learning curves.
         """
-        self.fig, self.ax = plt.subplots()
+        if self.ax is None:
+            self.fig, self.ax = plt.subplots()
         # Specify the curves to draw and their labels
         labels = ("Training Score", "Cross Validation Score")
         curves = (
@@ -309,6 +315,9 @@ class FeatureCurve:
         Whether to shuffle training data before taking prefixes of it
         based on``train_sizes``.
 
+    ax : matplotlib.Axes object, optional
+        The axes object to plot the figure on.
+
     random_state : int, RandomState instance or None, optional (default=None)
         If int, random_state is the seed used by the random number generator;
         If RandomState instance, random_state is the random number generator;
@@ -353,6 +362,7 @@ class FeatureCurve:
         n_hints=3,
         cv=None,
         scoring=None,
+        ax=None,
         random_state=None,
         **kwargs
     ):
@@ -361,6 +371,7 @@ class FeatureCurve:
         self.hint_optimal = hint_optimal
         self.n_hints = n_hints
         self.cv = cv
+        self.ax = ax
         self.random_state = random_state
         self.features_order = features_order
 
@@ -391,7 +402,8 @@ class FeatureCurve:
         """
         Renders the training and test learning curves.
         """
-        self.fig, self.ax = plt.subplots()
+        if self.ax is None:
+            self.fig, self.ax = plt.subplots()
         # Specify the curves to draw and their labels
         labels = ("Training Score", "Cross Validation Score")
         curves = (
@@ -536,6 +548,9 @@ class FeatureLearningPlot:
         If None, the random number generator is the RandomState instance used
         by `np.random`. Used when ``shuffle`` is True.
 
+    figure_kwargs : dict
+        Keyword arguments that are passed to the matplotlib figure
+
     kwargs : dict
         Keyword arguments that are passed to the base class and may influence
         the visualization as defined in other Visualizers.
@@ -574,7 +589,7 @@ class FeatureLearningPlot:
         train_sizes=DEFAULT_TRAIN_SIZES,
         random_state=None,
         shuffle=False,
-        **kwargs
+        **figure_kwargs,
     ):
         self.estimator = estimator
         self.scoring = 'balanced_accuracy' if scoring is None else scoring
@@ -583,6 +598,7 @@ class FeatureLearningPlot:
         self.train_sizes = train_sizes
         self.random_state = random_state
         self.shuffle = shuffle
+        self.figure_kwargs = {} if figure_kwargs is None else figure_kwargs
 
     def fit(self, X, y):
         # Get features_order using gbc estimator
@@ -621,9 +637,10 @@ class FeatureLearningPlot:
         return self
 
     def draw(self, nlayers=10):
-        self.fig, self.ax = plt.subplots()
+        self.fig, self.ax = plt.subplots(**self.figure_kwargs)
 
         contourf = self.ax.contourf(self.train_sizes, self.features_order, self.test_scores_mean_, nlayers)
+        self.ax.tick_params(axis='y', labelsize=10 - np.log10(len(self.features_order)))
         cbar = self.fig.colorbar(contourf)
         cbar.ax.get_yaxis().labelpad = 20
         cbar.ax.set_ylabel('Cross Validation Score', rotation=270)
