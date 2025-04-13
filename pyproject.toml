@@ -67,4 +67,4 @@ requires = [
 ]
 
 [tool.setuptools.packages.find]
-exclude = ["tests", "tests.*"]
+exclude = ["tests", "tests.*", "build*"]
